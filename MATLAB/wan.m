@@ -1,7 +1,8 @@
 close all;
 clc;
+% run loaddata first
 
-% %% SETUP
+%% SETUP
 verbosity = 1;
 Fs = 128+1;
 look_ahead_percentage = .75;
@@ -47,21 +48,8 @@ clear to_normalize;
 % clear to_remove_DC;
 
 
-
-% % HPF
-d = fdesign.highpass('Fst,Fp,Ast,Ap',0.1,0.16,60,1, 128);
-Hd = design(d,'butter');
-% fvtool(Hd);
-filtered = filter(Hd,normalized);
-figure;
-plot(filtered)
-title('aaaaaaaaaaaaaaaaaaaaa');
-hold all;
-
-
-
 % % thresholded signal
-to_threshold = filtered;
+to_threshold = normalized;
 % to_threshold = normalized;
 % to_threshold = denoised_mean;
 [pks,locs]=findpeaks(-1*to_threshold,'MINPEAKDISTANCE',min_samples_to_next_peak,'MINPEAKHEIGHT',(thresholding_percentage*1*max(to_threshold)));
@@ -75,11 +63,11 @@ if verbosity == 1
 end
 
 edges_locs = generate_edges_from_locs(locs);
-segmented = segment_by_edge(time, filtered, edges_locs);
+segmented = segment_by_edge(time, normalized, edges_locs);
 
 % plot em
 figure;
-plot(time,filtered)
+plot(time,normalized)
 for j=1:length(segmented)
     hold all;
     plot(segmented{j}(:,1),segmented{j}(:,2))

@@ -8,6 +8,7 @@ for i=1:length(M(:,1))
 	time(i) = i;
 end
 
+time = time';
 
 AF3 = EEG_data(:,1);
 F7 = EEG_data(:,2);
@@ -24,9 +25,17 @@ F4 = EEG_data(:,12);
 F8 = EEG_data(:,13);
 AF4 = EEG_data(:,14);
 
-% IIR_TC = 256;
-% [rows columns]= size(EEG_data);
-% AC_EEG_data = zeros(rows, columns);
 
+%%
+d = fdesign.highpass('Fst,Fp,Ast,Ap',0.1,0.16,60,1, 128);
+Hd = design(d,'butter');
+F8_2 = filter(Hd,F8);
+
+%%
+
+
+clear d;
+clear Hd;
+clear EEG_data;
 clear M;
 clear i;
