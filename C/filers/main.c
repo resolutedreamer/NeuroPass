@@ -78,7 +78,7 @@ void loaddata(char * input)
 int main()
 {
 	printf("Hello World.\n");
-	loaddata("C:/CCStudio_v3.1/MyProjects/filers/AC_EEG_data.CSV");
+	loaddata("C:\Data\anthony.CSV");
 	printf("Done.\n");
 	return 0;
 }
