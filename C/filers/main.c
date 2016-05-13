@@ -1,10 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int main(void)
-{	
-	char* filename = "C:/CCStudio_v3.1/MyProjects/s1-24eyes.CSV";
-	int i = 0, j = 0, lines = 0;
+float** loaddata(char* filename, int numof_lines)
+{
+	int i = 0, j = 0;
 	char c;
 
 	// temp array for fscanf
@@ -24,21 +23,6 @@ int main(void)
 	else
 		printf("File opened succesfully.\n");
 
-	printf("Counting lines.\n");
-	// counter number of lines in file
-	do
-	{
-		c = fgetc(csv);
-		if (c == '\n')
-		{
-			++lines;
-		}
-	} while (c != EOF);
-
-	printf("Done counting %d lines.\n", lines);
-
-	//reset cursor
-	rewind(csv);
 
 	// skip over first line
 	do
@@ -49,11 +33,13 @@ int main(void)
 	data = (float**)malloc(14 * sizeof(float*));
 	if (data == NULL)
 		printf("Malloc Failed! temp = %f .\n",data);
+	else
+		printf("Data is located at: %f .\n",data);
 	// create 2nd dimension of final float array on heap	
 	for (i = 0; i < 14; i++)
 	{	
 		ptemp = NULL;
-		ptemp = (float *)malloc(lines * sizeof(float));
+		ptemp = (float *)malloc(numof_lines * sizeof(float));
 		if (ptemp == NULL)
 			printf("Malloc Failed! ptemp = %f .\n", ptemp);
 		else
@@ -66,7 +52,7 @@ int main(void)
 	ptemp = NULL;
 
 	// iterate by line
-	for (i = 0; i < lines; i++)
+	for (i = 0; i < numof_lines; i++)
 	{
 
 		// get first 16 columns
@@ -101,8 +87,6 @@ int main(void)
 		printf("Line %d is completed.\n", counter);
 	}
 
-	printf("No of lines is %d\n", lines);
-
 	// print out final 2D array
 	for (i = 0; i < 14; i++)
 	{
@@ -113,7 +97,60 @@ int main(void)
 				printf("\n");
 		}
 	}
-	return 0;
+	printf("import complete!\n");
+	fclose(csv);
+	return data;
 }
+
+int countlines(char* filename)
+{
+	char c;
+	int numof_lines = 0;
+	FILE* csv = fopen(filename, "r");
+
+	// check if file was opened
+	if (!csv)
+		printf("File could not be opened.\n");
+	else
+		printf("File opened succesfully.\n");
+	printf("Counting lines.\n");
+
+	// counter number of lines in file
+	do
+	{
+		c = fgetc(csv);
+		if (c == '\n')
+		{
+			++numof_lines;
+		}
+	} while (c != EOF);
+
+	printf("Done counting %d lines.\n", numof_lines);
+	fclose(csv);
+	return numof_lines;
+}
+
+int main(void)
+{
+	float** rawdata = NULL;
+	int rows;
+	char* filename = "C:/CCStudio_v3.1/MyProjects/s1-24eyesshort.CSV";
+
+	rows = countlines(filename);
+	rawdata = loaddata(filename,rows);
+	if (rawdata == NULL)
+		printf("rawdata is still null!\n",rawdata);
+	else
+		printf("rawdata is located at: %f .\n",rawdata);
+	printf("import complete!\n");
+
+	return 0;
+
+}
+
+
+
+
+
 
 

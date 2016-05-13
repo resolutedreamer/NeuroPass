@@ -5,7 +5,7 @@
 ;; INPUT filers.cdb
 
 ;; CONFIGURATION/VERSION INFORMATION
-	.asg "Sun Dec 08 17:15:32 2013", VERS$DATE
+	.asg "Sun Dec 08 17:35:47 2013", VERS$DATE
 
 ;; PROLOGUE
 	.include filerscfg.h62

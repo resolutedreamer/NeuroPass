@@ -297,9 +297,9 @@ SECTIONS {
         .SDRAM$heap: {
             SDRAM$B = .;
             _SDRAM_base = .;
-            SDRAM$L = 0x100000;
-            _SDRAM_length = 0x100000;
-            . += 0x100000;
+            SDRAM$L = 0xf00000;
+            _SDRAM_length = 0xf00000;
+            . += 0xf00000;
         } > SDRAM
         
 }

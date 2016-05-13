@@ -92,7 +92,7 @@ type GlobalStatus {
         prop Visible :: 0
         prop Writable :: 0
     }
-    global DATE :: "Sun Dec 08 17:15:32 2013" { 
+    global DATE :: "Sun Dec 08 17:35:47 2013" { 
         prop Type :: "{21455EA3-B96A-11cf-9BFE-0000C0AC14C7}"
         prop Visible :: 0
         prop Writable :: 0
@@ -21665,7 +21665,7 @@ object SDRAM :: MEM {
     param base :: -2147483648
     param len :: 16777216
     param iAllocHeap :: 1
-    param iHeapSize :: 1048576
+    param iHeapSize :: 15728640
     param iUserHeapId :: 0
     param iHeapId :: @segment_name
     param iReqHeapCount :: 1
