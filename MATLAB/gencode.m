@@ -17,7 +17,7 @@ plot(plot_all_peaks,'o')
 % now we have all the peaks that were thresholded (sorted in time), STORED IN all_peaks
 
 
-min_peak_distance = 200;
+min_peak_distance = 175;
 k=1;
 for i=1:length(all_peaks)
 	if i==1
@@ -49,69 +49,54 @@ plot(plot_masked_peaks,'o')
 
 % CODES: POS-NEG-POS-NEG = LRL,	any deviation = BLINK
 
-% k=1;
-% blinks=0;
-% lrl = 0;
-
-% lrlposition = zeros(30,1);
-% lrlheight = zeros(30,1);
-% lrlcount = 0;
-% previous = [0, 0, 0, 0];
-% for i=1:length(masked_peaks)-3
-	% if i==1
-		% continue
-	% end
-	
-	% if masked_peaks(i,2) == 2
-		% if masked_peaks(i+1,2) == 3
-			% if masked_peaks(i+2,2) == 2
-				% if masked_peaks(i+3,2) == 3
-					% %we increment the count of lrls
-					% lrlcount = lrlcount + 1;
-					% %we set the position of the lrl event
-					% lrlposition(lrlcount) = masked_peaks(i,1);
-					% i = i+3;
-				% end
-			% end
-		% end
-	% end
-
-	
-% end
-% lrlcount = lrlcount -1;
-
 lrl = 0;
-code = [2, 3, 2, 3];
+blinking = 0;
+code1 = [POS_VAL, NEG_VAL, POS_VAL, NEG_VAL];
+code2 = [POS_VAL, POS_VAL, POS_VAL, POS_VAL];
 k=1;
-masked_array = masked_peaks;
 i=1;
-while (i<length(masked_peaks))
+n=1;
+m=1;
+masked_array = masked_peaks;
+rollz(1) = 1;
+blinkz(1) = 1;
+while (i<=length(masked_array))
 	if i<4
 		i=i+1;
-		continue
+		continue;
 	end
 	window = [ masked_array(i-3,2), masked_array(i-2,2), masked_array(i-1,2), masked_array(i,2)];
-	
-	if window == code
-		i; window;
+
+	if window == code1
+		i;
+		window;
 		lrl = lrl + 1;
-		i = i + 3;
-		store(k) = masked_array(i-3,1);
+		rollz(n) = masked_array(i-3,1);
+		n=n+1;
+		code(k, 1) = masked_array(i-3,1);
+		code(k, 2) = masked_array(i-3,2);
+		i = i + 4;
+		k=k+1;
+	elseif window == code2
+		blinking = blinking+1;
+		blinkz(m) = masked_array(i-3,1);
+		m=m+1;
+		code(k, 1) = masked_array(i-3,1);
+		code(k, 2) = masked_array(i-3,2);
+		i = i + 4;
 		k=k+1;
 	else
 		i=i+1;
 		continue;
 	end
-	
-end	
-
-
+end
 
 plot_code = zeros(length(signal),1);
-plot_code = plotPOS(signal,store,plot_code);
+plot_lrl = plotPOS(signal,rollz,plot_code);
+plot_blinks = plotPOS(signal,blinkz,plot_code);
 figure;
 title('Generated code');
 hold all;
 plot(signal)
-plot(plot_code,'o')
-
+plot(plot_lrl,'o')
+plot(plot_blinks,'o')

@@ -12,6 +12,9 @@ clc
 % loaddata('data/anthony-1minmixed-19.11.13.19.12.03.csv')
 input_path = 'data/s1-24eyeslrl-27.11.13.01.57.01.csv';
 % input_path = 'data/s1-password-27.11.13.01.59.53.csv';
+% input_path = 'data/s4-30clenches-26.11.13.23.16.05.csv';
+
+input_path = 'data/s1-1-09.12.13.12.17.47.csv';
 
 % % LOAD DATA
 loaddata(input_path);
@@ -36,7 +39,7 @@ time = AC_EEG_data(:,15);
 
 % Filters
 display('Applying filters ...');
-signal = F7;%(300:1500);
+signal = FC5;%end-200);
 verbosity = 1;
 filtered = HPF(signal, 1000, Fs, 1);
 % filtered = filtered(400:end)
@@ -44,8 +47,8 @@ filtered = HPF(signal, 1000, Fs, 1);
 
 % Peaks
 display('Finding peaks ...');
-signal = filtered;
-threshold = mean(signal)+std(signal)*1.5;
+signal = filtered;%(1:4480);%(200:end);
+threshold = mean(signal)+std(signal)*1;
 min_distance = 200;
 verbosity = 1;
 [pks_p, locs_p] = fpeaks(signal, threshold, min_distance, verbosity);

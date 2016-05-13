@@ -11,6 +11,10 @@ sort(edges);
 
 while i<length(edges)
     nd=int32(edges(i));    
+	% if st == nd
+		% i=i+1;
+		% continue;
+	% end
     segment{i} = [time(st:nd), signal(st:nd)];
     
     i =i+1;

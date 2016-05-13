@@ -14,6 +14,12 @@ for r = 2 : rows
     back = (back*( IIR_TC- 1 ) + EEG_data( r,:)) / IIR_TC; 
     AC_EEG_data( r,:) = EEG_data( r,:)- back;
 end
+figure;
+hold all;
+title('Orignial signal and Low Pass Filtered data (@.178 Hz)');
+plot(EEG_data(:,2));
+plot(AC_EEG_data(:,2));
+
 % AC_EEG_data = EEG_data;
 %% add time column back in
 for i=1:length(AC_EEG_data(:,1))

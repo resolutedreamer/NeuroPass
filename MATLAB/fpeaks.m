@@ -91,12 +91,6 @@ if verbosity >= 2
 end
 
 
-
-
-
-
-
-
 % WHAT TO RETURN
 pks = pks_th;
 locs = locs_th;

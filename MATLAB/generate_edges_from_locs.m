@@ -4,12 +4,29 @@ function [edges_locs] = generate_edges_from_locs(peaks)
 % as the midpoint between two peaks.
 
 i=1;
+
 st=1;
+
 sort(peaks);
 
 while i<length(peaks)
-	edge = int32( (peaks(i)+peaks(i+1)) /2 );
-	edges_locs(i) = edge;
+    %nd=peaks(i);
+	%edge = int32( (nd+st)/2 );
+    
+    %if (i==1)
+    %    edge = i;
+    %    edge_locs(i) = edge;
+    %elseif (i==length(peaks)-1)
+    %    edge = i;
+    %    edge_locs(i) = i;
+    %else
+        edge = int32( (peaks(i)+peaks(i+1)) /2 );
+        edges_locs(i) = edge;
+    %end
+    
 	st = edge +1;   
-    i = i+1; 
+    i =i+1; 
 end
+
+%length(edge)
+%length(peaks)
