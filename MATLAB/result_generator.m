@@ -26,7 +26,7 @@ AF4 = AC_EEG_data(:,14);
 time = AC_EEG_data(:,15);
 display('Done.')
 
-verbosity = 0;
+verbosity = 1;
 
 ch1 = F7;	%blink and clench
 ch2 = T7;	%clench only
