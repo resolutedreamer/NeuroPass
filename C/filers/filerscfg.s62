@@ -5,7 +5,7 @@
 ;; INPUT filers.cdb
 
 ;; CONFIGURATION/VERSION INFORMATION
-	.asg "Tue Nov 26 17:53:08 2013", VERS$DATE
+	.asg "Sun Dec 08 17:15:32 2013", VERS$DATE
 
 ;; PROLOGUE
 	.include filerscfg.h62
@@ -303,9 +303,9 @@ DIO$SETOF           .set 00H
 	GBL_config  _ROM, _BIGENDIAN, _USERINIT, _USERINITFXN, _ENABLEINST, _CACHE, _L2CONFIGURE, _L2MODE, _L2PRIORITY, _L2MARMASK, _SUPPORTCSL, _TRCMASKVALUE, _CALLCSLCFGINIT, _C641XL2PRIORITY, _L2MARMASK1, _L2MARMASK2, _L2MARMASK3, _L2MARMASK4, _L2MARMASK5, _L2CONFIGALLOC, _L2ALLOC
 
 ;; ======== MEM_config ========
-	.asg 01H, _gNumHeap
+	.asg 02H, _gNumHeap
 	.asg ISRAM, _SEGZERO
-	.asg ISRAM, _MALLOCSEG
+	.asg SDRAM, _MALLOCSEG
 	MEM_config  _gNumHeap, _SEGZERO, _MALLOCSEG
 
 ;; ======== OBJ_config ========
@@ -472,7 +472,7 @@ DIO$SETOF           .set 00H
 ;; MEM_Obj SDRAM (len, iAllocHeap, iSegZero, iHeapId)
 	.global SDRAM
 	.asg 01000000H, _len
-	.asg 00H, _iAllocHeap
+	.asg 01H, _iAllocHeap
 	.asg ISRAM, _iSegZero
 	.asg segment_name, _iHeapId
 	MEM_Obj 1, SDRAM, 0, _len, _iAllocHeap, _iSegZero, _iHeapId

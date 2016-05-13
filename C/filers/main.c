@@ -1,20 +1,22 @@
 #include <stdio.h>
-#define LENGTH 500
-#define PI 3.14159265359
+#include <stdlib.h>
 
-// initialize 2D float array
-float importeddata[14][LENGTH];
-
-void loaddata(char * input)
-{
-	//initialize all variables
+int main(void)
+{	
+	char* filename = "C:/CCStudio_v3.1/MyProjects/s1-24eyes.CSV";
+	int i = 0, j = 0, lines = 0;
 	char c;
-	int i = 0, j = 0;
-	float temp[16];
-	//#pragma data(buffer,".EXT_RAM")
 
-	//open the file
-	FILE* csv = fopen(input, "r");
+	// temp array for fscanf
+	float temp[16];
+
+	float** data;
+	float* ptemp;
+
+	// counters the number of line loop events. Should be same a lines variable
+	int counter = 0;
+
+	FILE* csv = fopen(filename, "r");
 
 	// check if file was opened
 	if (!csv)
@@ -22,108 +24,96 @@ void loaddata(char * input)
 	else
 		printf("File opened succesfully.\n");
 
-	// skip over first line	
+	printf("Counting lines.\n");
+	// counter number of lines in file
+	do
+	{
+		c = fgetc(csv);
+		if (c == '\n')
+		{
+			++lines;
+		}
+	} while (c != EOF);
+
+	printf("Done counting %d lines.\n", lines);
+
+	//reset cursor
+	rewind(csv);
+
+	// skip over first line
 	do
 	c = fgetc(csv);
-	while (c != '\n');
+	while (c != '\n');	
 
-	//store one row, for LENGTH number of rows
-	for (i = 0; i < LENGTH; i++)
+	// 1st dimension of final data array. Return this pointer to access the array!
+	data = (float**)malloc(14 * sizeof(float*));
+	if (data == NULL)
+		printf("Malloc Failed! temp = %f .\n",data);
+	// create 2nd dimension of final float array on heap	
+	for (i = 0; i < 14; i++)
+	{	
+		ptemp = NULL;
+		ptemp = (float *)malloc(lines * sizeof(float));
+		if (ptemp == NULL)
+			printf("Malloc Failed! ptemp = %f .\n", ptemp);
+		else
+			printf("ptemp = %d. \n",ptemp);
+		data[i] = ptemp;
+	}
+
+
+	// not really necessay
+	ptemp = NULL;
+
+	// iterate by line
+	for (i = 0; i < lines; i++)
 	{
 
 		// get first 16 columns
 		for (j = 0; j < 16; j++)
 		{
-			// add double to array
+			// add float to temp array
 			fscanf(csv, "%f", &temp[j]);
 
 			// skip comma
 			fgetc(csv);
 		}
 
-		// copy correct columns to new array
- 		for (j = 0; j < 14; j++)
+		// copy correct temp to final array
+		for (j = 0; j < 14; j++)
 		{
-			importeddata[j][i] = temp[j + 2];
+			data[j][i] = temp[j + 2];
 		}
+
+		counter++;
 
 		// skip rest of line
 		do
-		c = fgetc(csv);
-		while (c != '\n');
-		printf("Stored row %d.\n",i);
-	}
-
-	printf("Data imported into data array.\n");
-}
-
-// iirsos.c generic iir filter using cascaded second order sections
-void IIRSOS(float* filterthis,float* temp,int Fs, int cutoff,int highorlowpass)	 //low is 0 high is 1
-{	
-	#define NUM_SECTIONS 1
-	float b[NUM_SECTIONS][3]={ {0.0, 0.0, 0.0} };
-	float a[NUM_SECTIONS][2]={ {0.0, 0.0} };
-	float w[NUM_SECTIONS][2] = {0};
-	float RC;
-	float T;
-	int i = 0;
-
-	RC = 1/(2*PI*cutoff);
-	T = 1/Fs;
-	if (highorlowpass == 0)
-	{
-		b[NUM_SECTIONS][0] = 1 / (1 + (2*RC)/T) ;
-		b[NUM_SECTIONS][1] = 1 / (1 + (2*RC)/T) ;
-		a[NUM_SECTIONS][1] = (1 - (2*RC)/T ) / (1 + (2*RC)/T ) ;
-	}
-	else if (highorlowpass == 1)
-	{
-		b[NUM_SECTIONS][0] = 1* ( 1 / (1 + T/(2*RC)) ) ;
-		b[NUM_SECTIONS][1] = -1* ( 1 / (1 + T/(2*RC)) ) ;
-		a[NUM_SECTIONS][1] = -1*(1 - (2*RC)/T ) / (1 + (2*RC)/T ) ;
-	}
-
-	for(i = 0; i < LENGTH ; i++)
-	{	
-		int section;   // index for section number
-		float input;   // input to each section
-		float wn,yn;   // intermediate and output values in each stage
-		input = filterthis[i];
-		for (section=0 ; section< NUM_SECTIONS ; section++)
 		{
-			wn = input - a[section][0]*w[section][0] - a[section][1]*w[section][1];
-			yn = b[section][0]*wn + b[section][1]*w[section][0] + b[section][2]*w[section][1];
-			//printf("%f,%f\n",wn,yn);
-			w[section][1] = w[section][0];
-			w[section][0] = wn;
-			input = yn;              // output of current section will be input to next
-		}
-		temp[i] = yn;
+			c = fgetc(csv);
+
+			// check if EOF
+			if (feof(csv))
+				break;
+
+		} while (c != '\n');
+
+		printf("Line %d is completed.\n", counter);
 	}
-	
-}
 
+	printf("No of lines is %d\n", lines);
 
-
-float* filterdata(float * filterthis)
-{
-	float* temp = (float*)malloc(sizeof(float)*LENGTH);
-	IIRSOS(filterthis,temp,128,1000,1);	
-	return temp;
-}
-
-
-
-int main()
-{
-	float* filteredchannel;
-	//float* filteredchannel2;
-	printf("Hello World.\n");
-	loaddata("C:/CCStudio_v3.1/MyProjects/filers/s1-24eyeslrl-27.11.13.01.57.01.CSV");
-	filteredchannel = filterdata(importeddata[0]);
-	//filteredchannel2 = filterdata(importeddata[1]);
-	printf("Filtered Channel is stored starting at address: %d\n",filteredchannel);
-	printf("Done.\n");
+	// print out final 2D array
+	for (i = 0; i < 14; i++)
+	{
+		for (j = 0; j < 6; j++)
+		{
+			printf("%f, ", data[i][j]);
+			if (j == (6 -1) )
+				printf("\n");
+		}
+	}
 	return 0;
 }
+
 

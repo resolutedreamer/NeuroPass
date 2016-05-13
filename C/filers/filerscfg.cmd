@@ -8,7 +8,7 @@
 GBL_USERINITFXN = _FXN_F_nop;
 
 MEM_SEGZERO = ISRAM;
-MEM_MALLOCSEG = ISRAM;
+MEM_MALLOCSEG = SDRAM;
 
 CLK_TIMEFXN = CLK_F_getshtime;
 CLK_HOOKFXN = HWI_F_dispatch;
@@ -209,6 +209,8 @@ SECTIONS {
             _HWI_STKTOP = GBL_stackbeg;
         } > ISRAM
         
+        .gio:     {} > ISRAM
+        
         .trace: fill = 0x0 {
            _SYS_PUTCBEG = .;
            . += 0x200;
@@ -284,8 +286,6 @@ SECTIONS {
         
         .sys:     {} > ISRAM
         
-        .gio:     {} > ISRAM
-        
         .ISRAM$heap: {
             ISRAM$B = .;
             _ISRAM_base = .;
@@ -293,6 +293,14 @@ SECTIONS {
             _ISRAM_length = 0x8000;
             . += 0x8000;
         } > ISRAM
+        
+        .SDRAM$heap: {
+            SDRAM$B = .;
+            _SDRAM_base = .;
+            SDRAM$L = 0x100000;
+            _SDRAM_length = 0x100000;
+            . += 0x100000;
+        } > SDRAM
         
 }
 
