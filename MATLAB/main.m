@@ -1,33 +1,27 @@
 close all;
+clear;
 clc;
 %% SETUP
-% loaddata('data/anthony-1minclenches-19.11.13.17.25.47.csv','1')
-% loaddata('data/anthony-1minlniks-19.11.13.17.23.35.csv','1')
-loaddata('data/anthony-1minmixed-19.11.13.19.12.03.csv','1')
-load('AC_EEG_data.mat');
+display('Welcome to NeuroPass Version 1.0');
+display('What would you like to do:');
+display('a) Set a new password.');
+display('b) Authenticate against the existing password.');
+str = input('Type either "a" or "b".\n','s');
+if str == 'a'
+    [filename,pathname] = uigetfile('.csv','Please enter the path to your file.');
+    fullpath = strcat(pathname,filename);
+    % str = input('Please enter the path to your file.','s');
+    result = result_generator(fullpath);
 
-%% extract the processed datasets
-AF3 = AC_EEG_data(:,1);
-F7 = AC_EEG_data(:,2);
-F3 = AC_EEG_data(:,3);
-FC5 = AC_EEG_data(:,4);
-T7 = AC_EEG_data(:,5);
-P7 = AC_EEG_data(:,6);
-O1 = AC_EEG_data(:,7);
-O2 = AC_EEG_data(:,8);
-P8 = AC_EEG_data(:,9);
-T8 = AC_EEG_data(:,10);
-FC6 = AC_EEG_data(:,11);
-F4 = AC_EEG_data(:,12);
-F8 = AC_EEG_data(:,13);
-AF4 = AC_EEG_data(:,14);
-time = AC_EEG_data(:,15);
-display('Done.')
-
-verbosity = 1;
-
-ch1 = F7;	%blink and clench
-ch2 = T7;	%clench only
-
-result = blink_clench(ch1,ch2,time,1);
-display(result');
+    Opt.Method = 'SHA-1';
+    password = DataHash(result, Opt);
+    display('You have saved a new password:');
+    display(password);
+    clear;
+elseif str == 'b'
+    display('Please enter the path to your file.');
+    % write some code
+    display('Your file matches the current password!');
+    display('Your file does not match the current password!');
+    clear;
+end
