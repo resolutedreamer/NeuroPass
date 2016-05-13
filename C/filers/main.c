@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #define PI 3.14159265359
+#define NUMEVENTS 10
 #define NUM_SECTIONS 1
 #define POS_VAL 2	// POS peaks have value 2
 #define NEG_VAL 3	// NEG peaks have value 3
@@ -10,10 +11,176 @@ typedef struct Events
 {
 	int loc;
 	int logical_value;
+	int numof_events;
 } Events;
 
 
+int countlines(char* filename);
+float** loaddata(char* filename, int numof_lines);
+void IIRSOS(float* filterthis, int sig_length, float* temp, int Fs, int cutoff, int highorlowpass);
+void dcoffsetbegone(float* datamatrix[], int numof_rows);
+float* filterdata(float * signal, int sig_length);
+float findmean(float* signal, int signal_length);
+float findstd(float* signal, int signal_length);
+float calcthreshold(float* signal, int rows);
+void fpeaks(float* signal, int signal_length, float threshold, float** usefulpks, int ** usefullocs, int * usefulpkcnt, int posorneg);
+void sort_and_combine(Events* positive_events, int positivepkcnt, Events* negative_events, int negativepkcnt, Events* total_events);
+Events* get_total_events(int* positivepklocs, int* negativepklocs, int positivepkcnt, int negativepkcnt);
+Events* remove_excess_peaks(Events* total_events, int total_events_cnt, int* numof_realpeaks);
+int* lrl_count_or_blinks(int* masked_peaks, int masked_peaks_length, int** codestorage);
+void code_from_pwm(int sig_length, int* positivepklocs, int positivepkcnt, int** codestorage);
+
+int main(void)
+{
+	//////////////Variable Declarations//////////////
+
+	int i = 0, j = 0, k = 0,  flag = 0;
+	
+	//location of data file to be imported
+	char* filename;
+
+	//pointers for importing data
+	float** rawdata = NULL;
+	float* F7 = NULL;
+	int sig_length = 0;
+
+	//pointers for intermediate steps of the process
+	float* positivepkheights = NULL;
+	int* positivepklocs = NULL;
+	int positivepkcnt = 0;
+
+	float* negativepkheights = NULL;
+	int* negativepklocs = NULL;
+	int negativepkcnt = 0;
+
+	float threshold = 0;
+
+	Events* total_events;
+	Events* masked_peaks;
+	int * masked_values;
+	int totalpkcnt = 0;
+	int numof_realpeaks = 0;
+	//the final code
+	int* code = NULL;
+
+	//////////////Executable Statements//////////////
+	printf("Welcome to NeuroPass!\n\n");
+	filename = "C:/Users/SirLonely/Dropbox/EE113D/Raw Data/anthony-s1-09.12.13.15.22.52.CSV";
+	//calculate the rows in the csv file
+	sig_length = countlines(filename) - 1;
+
+	//import the csv file
+	rawdata = loaddata(filename, sig_length);
+
+	//verify successful import of csv file
+	if (rawdata == NULL)
+	{
+		printf("Import Failed. rawdata is still null!\n");
+		printf("Sorry! We need to end the program now.\n");
+		return 0;
+	}
+
+	else
+		printf("Import Successful! rawdata is located at: 0x%x.\n", rawdata);
+
+	//remove the raw data's dc offset
+	dcoffsetbegone(rawdata, sig_length);
+
+	//run desired channel through yuyu's highpass filter
+	F7 = filterdata(rawdata[1], sig_length);
+
+	//calculate the threshold
+	threshold = calcthreshold(F7, sig_length);
+
+
+	//find the positive peaks of the channel of choice
+	fpeaks(F7, sig_length, threshold, &positivepkheights, &positivepklocs, &positivepkcnt, 0);
+	//find the negative peaks of the channel of choice
+	fpeaks(F7, sig_length, threshold, &negativepkheights, &negativepklocs, &negativepkcnt,1);
+
+	for(i = 0; i < positivepkcnt; i++)
+		printf("%d\n",positivepklocs[i]);
+	total_events = get_total_events(positivepklocs, negativepklocs, positivepkcnt, negativepkcnt);
+	totalpkcnt = positivepkcnt + negativepkcnt;
+
+	//code can be up to NUMEVENTS long
+	code = (int*)malloc(NUMEVENTS*sizeof(int));
+	//fill it with zeroes
+	for (i = 0; i < NUMEVENTS; i++)
+		code[i] = 0;
+
+	if (flag == 0)
+	//generate the password using the pwm method of blinks
+	{		
+		code_from_pwm(sig_length, positivepklocs, positivepkcnt, &code);
+	}
+	else if (flag == 1)
+	//generate the password using the signal identification method
+	{
+		//knowing the set of threshold-ed peaks, quantize
+		//the positive and negative peaks into a sequence of + or - peaks
+		masked_peaks = remove_excess_peaks(total_events, totalpkcnt, &numof_realpeaks);
+		masked_values = (int*)malloc(sizeof(int)*numof_realpeaks);
+		for (i = 0; i < numof_realpeaks;i ++)
+		{
+			masked_values[i] = masked_peaks[i].logical_value;
+		}
+
+		//using the sequence, identify the lrl
+		lrl_count_or_blinks(masked_values, numof_realpeaks, &code);
+		//remainder is blinks???
+	}
+
+	//return the final password sequence
+	printf("My Code is [%d %d %d %d %d]\n", code[0], code[1], code[2], code[3], code[4]);
+
+	printf("Thanks!\n");
+	free(rawdata);
+	free(F7);
+	free(positivepkheights);
+	free(positivepklocs);
+	free(negativepkheights);
+	free(negativepklocs);
+	return 0;
+
+}
+
+
+int countlines(char* filename)
+// count the number of lines in the given file
+{
+	char c;
+	int numof_lines = 0;
+	FILE* csv = fopen(filename, "r");
+
+	// check if file was opened
+	if (!csv)
+	{
+		printf("File could not be opened.\n");
+		return -1;
+	}
+
+	else
+		printf("File opened succesfully.\n");
+	printf("Counting lines.\n");
+
+	// counter number of lines in file
+	do
+	{
+		c = fgetc(csv);
+		if (c == '\n')
+		{
+			++numof_lines;
+		}
+	} while (c != EOF);
+
+	printf("Done counting %d lines.\n", numof_lines);
+	fclose(csv);
+	return numof_lines;
+}
+
 float** loaddata(char* filename, int numof_lines)
+// load into a 2d array the contents of the rows 3 - 16 of the CSV file given
 {
 	int i = 0, j = 0;
 	char c;
@@ -21,8 +188,8 @@ float** loaddata(char* filename, int numof_lines)
 	// temp array for fscanf
 	float temp[16];
 
-	float** data;
-	float* ptemp;
+	float** data = NULL;
+	float* ptemp = NULL;
 
 	// counters the number of line loop events. Should be same a lines variable
 	int counter = 0;
@@ -35,32 +202,36 @@ float** loaddata(char* filename, int numof_lines)
 	else
 		printf("File opened succesfully.\n");
 
+	if (numof_lines <= 0)
+	{
+		return data;
+	}
 
 	// skip over first line
 	do
 	c = fgetc(csv);
-	while (c != '\n');	
+	while (c != '\n');
 
 	// 1st dimension of final data array. Return this pointer to access the array!
 	data = (float**)malloc(14 * sizeof(float*));
 	if (data == NULL)
-		printf("Malloc Failed! temp = %f .\n",data);
+		printf("Malloc Failed! temp = %f .\n", data);
 	else
-		printf("Data is located at: %f .\n",data);
+		printf("Data is located at: %f .\n", data);
 	// create 2nd dimension of final float array on heap	
 	for (i = 0; i < 14; i++)
-	{	
+	{
 		ptemp = NULL;
 		ptemp = (float *)malloc(numof_lines * sizeof(float));
 		if (ptemp == NULL)
-			printf("Malloc Failed! ptemp = %f .\n", ptemp);
+			printf("malloc Failed! ptemp = %f .\n", ptemp);
 		else
-			printf("ptemp = %d. \n",ptemp);
+			printf("ptemp = %d. \n", ptemp);
 		data[i] = ptemp;
 	}
 
 
-	// not really necessay
+	// not really necessary
 	ptemp = NULL;
 
 	// iterate by line
@@ -99,84 +270,46 @@ float** loaddata(char* filename, int numof_lines)
 		//printf("Line %d is completed.\n", counter);
 	}
 
-	// print out final 2D array
-	for (i = 0; i < 14; i++)
-	{
-		for (j = 0; j < 6; j++)
-		{
-			printf("%f, ", data[i][j]);
-			if (j == (6 -1) )
-				printf("\n");
-		}
-	}
 	printf("Import completed! Returning address of imported data back to main.\n");
 	fclose(csv);
 	return data;
 }
 
-int countlines(char* filename)
+void IIRSOS(float* filterthis, int sig_length, float* temp, int Fs, int cutoff, int highorlowpass)	 //low is 0 high is 1
+// generic iir filter using cascaded second order sections
 {
-	char c;
-	int numof_lines = 0;
-	FILE* csv = fopen(filename, "r");
-
-	// check if file was opened
-	if (!csv)
-		printf("File could not be opened.\n");
-	else
-		printf("File opened succesfully.\n");
-	printf("Counting lines.\n");
-
-	// counter number of lines in file
-	do
-	{
-		c = fgetc(csv);
-		if (c == '\n')
-		{
-			++numof_lines;
-		}
-	} while (c != EOF);
-
-	printf("Done counting %d lines.\n", numof_lines);
-	fclose(csv);
-	return numof_lines;
-}
-
-// iirsos.c generic iir filter using cascaded second order sections
-void IIRSOS(float* filterthis,int sig_length, float* temp,int Fs, int cutoff,int highorlowpass)	 //low is 0 high is 1
-{
-	float b[3]={0.0, 0.0, 0.0};
-	float a[2]={0.0, 0.0};
-	float w[2]={0.0};
+	float b[3] = { 0.0, 0.0, 0.0 };
+	float a[2] = { 0.0, 0.0 };
+	float w[2] = { 0.0 };
 	float RC;
 	float T;
 	int i = 0;
 
-	RC = 1.0/(2*PI*cutoff);
-	T = 1.0/Fs;
+	RC = 1.0 / (2 * PI*cutoff);
+	T = 1.0 / Fs;
 	if (highorlowpass == 0)
 	{
 		printf("Running Yu Yu's LPF!\n");
-		b[0] = 1.0/(1.0+(2.0*RC)/T) ;
-		b[1] = 1.0/(1.0+(2.0*RC)/T) ;
-		a[1] = (1.0-(2.0*RC)/T)/(1.0+(2*RC)/T);
+		b[0] = 1.0 / (1.0 + (2.0*RC) / T);
+		b[1] = 1.0 / (1.0 + (2.0*RC) / T);
+		a[1] = (1.0 - (2.0*RC) / T) / (1.0 + (2 * RC) / T);
 	}
 	else if (highorlowpass == 1)
 	{
 		printf("Running Yu Yu's HPF!\n");
-		b[0] = 1.0*(1.0/(1.0+T/(2.0*RC)));
-		b[1] = -1.0*(1.0/(1.0+T/(2.0*RC)));
-		a[1] = -1.0*(1.0-(2.0*RC)/T )/(1.0+(2.0*RC)/T);
+		b[0] = 1.0*(1.0 / (1.0 + T / (2.0*RC)));
+		b[1] = -1.0*(1.0 / (1.0 + T / (2.0*RC)));
+		a[1] = -1.0*(1.0 - (2.0*RC) / T) / (1.0 + (2.0*RC) / T);
 	}
 
-	for(i = 0; i < sig_length ; i++)
-	{	
+	for (i = 0; i < sig_length; i++)
+	{
 		float input;   // input to each section
-		float wn,yn;   // intermediate and output values in each stage
+		float wn, yn;   // intermediate and output values in each stage
 		input = filterthis[i];
 
-		wn = input - a[0]*w[0] - a[1]*w[1];
-		yn = b[0]*wn + b[1]*w[0] + b[2]*w[1];
+		wn = input - a[0] * w[0] - a[1] * w[1];
+		yn = b[0] * wn + b[1] * w[0] + b[2] * w[1];
 		//printf("%f,%f\n",wn,yn);
 		w[1] = w[0];
 		w[0] = wn;
@@ -187,25 +320,19 @@ void IIRSOS(float* filterthis,int sig_length, float* temp,int Fs, int cutoff,int
 	printf("");
 }
 
-float* filterdata(float * signal, int sig_length)
+void dcoffsetbegone(float* datamatrix[], int numof_rows)
+// runs the emotiv filter on the input datamatrix
 {
-	float* temp = (float*)malloc(sizeof(float)*sig_length);
-	IIRSOS(signal, sig_length, temp,128.0,1000.0,1);	
-	return temp;
-}
-
-
-float** dcoffsetbegone(float* datamatrix[], int numof_rows)
-{	
 	int i, r;
 	float back[14];
 	int	IIR_TC = 256;
 	printf("Running the Emotiv HPF!\n");
+
 	//copy the first row of data into 'back'
 	for (i = 0; i < 14; i++)
 		back[i] = datamatrix[i][0];
 
-
+	//set the first row of data to 0's
 	for (i = 0; i < 14; i++)
 		datamatrix[i][0] = 0;
 
@@ -219,59 +346,66 @@ float** dcoffsetbegone(float* datamatrix[], int numof_rows)
 			back[i] = (tempback[i] + datamatrix[i][r]) / IIR_TC;
 		for (i = 0; i < 14; i++)
 			datamatrix[i][r] = datamatrix[i][r] - back[i];
-
 	}
 	printf("Emotiv HPF Filter Completed!\n");
-	return datamatrix;
 }
+
+float* filterdata(float * signal, int sig_length)
+// takes an input signal, returns a pointer to a copy of the signal that has been filtered
+{
+	float* temp = (float*)malloc(sizeof(float)*sig_length);
+	IIRSOS(signal, sig_length, temp, 128, 1000, 1);
+	return temp;
+}
+
 
 float findmean(float* signal, int signal_length)
 {
 	int i = 0;
 	float sum = 0, mean = 0;
 
-	for(i = 0; i < signal_length; i++)
+	for (i = 0; i < signal_length; i++)
 		sum = sum + signal[i];
 	mean = sum / (float)signal_length;
 
-	printf ("The mean is %f!\n", mean);
+	printf("The mean is %f!\n", mean);
 	return mean;
 }
 
 float findstd(float* signal, int signal_length)
 {
 	int i = 0, j = 0;
-	float * array = (float*)malloc(sizeof(float) * signal_length);
+	float * array = (float*)malloc(sizeof(float)* signal_length);
 	float sum = 0, mean = 0, variance = 0, std = 0;
 	mean = findmean(signal, signal_length);
 
 	for (j = 0; j < signal_length; j++)
 	{
 		// the array named 'array' stores the value of (signal - mean)^2
-	    array[i] = (float)pow((signal[i] - mean),2);
-	    sum += array[i];
-	    i++;
-	}	 
-	
+		array[i] = (float)pow((signal[i] - mean), 2);
+		sum += array[i];
+		i++;
+	}
+
 	//variance is the mean of the array named 'array'
 	variance = sum / signal_length;
 
 	// lastly, std is the sqrt of the variance
 	std = (float)sqrt(variance);
-	printf ("The standard deviation is %f!\n", std);
+	printf("The standard deviation is %f!\n", std);
 	return std;
 }
 
 float calcthreshold(float* signal, int rows)
 {
-	float mean,std,threshold;
+	float mean, std, threshold;
 	//find the mean of the signal
 	mean = findmean(signal, rows);
 	//find the std of the signal
 	std = findstd(signal, rows);
 	//return the sum of the mean and the std
 	threshold = (mean + std);
-	printf ("The thresholding value is %f!\n", threshold);
+	printf("The thresholding value is %f!\n", threshold);
 	return threshold;
 }
 
@@ -280,7 +414,7 @@ void fpeaks(float* signal, int signal_length, float threshold, float** usefulpks
 {
 	int i = 0, k = 0;
 	float* temp;
-	
+
 	float * peaks = NULL;
 	int * locs = NULL;
 	int pksfound = 0;
@@ -292,32 +426,32 @@ void fpeaks(float* signal, int signal_length, float threshold, float** usefulpks
 	float * finalpeaks = NULL;
 	int * finallocs = NULL;
 	int finalpksfound = 0;
-	
+
 	//copy either +signal or -signal into temp depending on user input
 	temp = (float*)malloc(sizeof(float)*signal_length);
 	if (posorneg == 0)
 	{
-		for(i = 0; i < signal_length; i++)
+		for (i = 0; i < signal_length; i++)
 		{
 			temp[i] = signal[i];
 		}
 	}
 	else if (posorneg == 1)
 	{
-		for(i = 0; i < signal_length; i++)
+		for (i = 0; i < signal_length; i++)
 		{
 			temp[i] = -1.0*signal[i];
 		}
 	}
 
 	// allocate enough room for signal/3 peaks
-	peaks = (float*) malloc(sizeof(float) * (int)signal_length/3);
+	peaks = (float*)malloc(sizeof(float)* (int)signal_length / 3);
 	// allocate enough room for signal/3 peak locations
-	locs = (int*) malloc(sizeof(int) * (int)signal_length/3);
+	locs = (int*)malloc(sizeof(int)* (int)signal_length / 3);
 
-	
+
 	// this loop finds bad peaks
-	for (i = 0; i < signal_length - 1 ; i++)
+	for (i = 0; i < signal_length - 1; i++)
 	{
 		if (i == 0)
 			continue;
@@ -332,9 +466,9 @@ void fpeaks(float* signal, int signal_length, float threshold, float** usefulpks
 	pksfound = k;
 
 	// allocate enough room for pksfound peaks
-	thresholdedpeaks = (float*) malloc(sizeof(float) * pksfound);
+	thresholdedpeaks = (float*)malloc(sizeof(float)* pksfound);
 	// allocate enough room for pksfound peak locations
-	thresholdedlocs = (int*) malloc(sizeof(int) * pksfound);
+	thresholdedlocs = (int*)malloc(sizeof(int)* pksfound);
 
 	// this loop gets rid of the peaks that are under the threshold
 	k = 0;
@@ -354,8 +488,8 @@ void fpeaks(float* signal, int signal_length, float threshold, float** usefulpks
 	free(peaks);
 	free(locs);
 
-	finalpeaks = (float*)malloc(sizeof(float) * thresholdedpksfound);
-	finallocs = (int*)malloc(sizeof(int) * thresholdedpksfound);
+	finalpeaks = (float*)malloc(sizeof(float)* thresholdedpksfound);
+	finallocs = (int*)malloc(sizeof(int)* thresholdedpksfound);
 	finalpksfound = thresholdedpksfound;
 
 	for (i = 0; i < finalpksfound; i++)
@@ -370,12 +504,12 @@ void fpeaks(float* signal, int signal_length, float threshold, float** usefulpks
 	*usefulpks = finalpeaks;
 	*usefullocs = finallocs;
 	*usefulpkcnt = finalpksfound;
-	
+
 	free(temp);
 }
 
-void sort_and_combine(Events* positive_events, int positivepkcnt,Events* negative_events, int negativepkcnt, Events* total_events)
-{	
+void sort_and_combine(Events* positive_events, int positivepkcnt, Events* negative_events, int negativepkcnt, Events* total_events)
+{
 	int i = 0, j = 0, temp = 0, tempval = 0;
 	//pos = 3 neg = 2
 	for (i = 0; i < positivepkcnt + negativepkcnt; i++)
@@ -387,31 +521,31 @@ void sort_and_combine(Events* positive_events, int positivepkcnt,Events* negativ
 		}
 		else if (i >= positivepkcnt)
 		{
-			total_events[i].loc = negative_events[i-positivepkcnt].loc;
-			total_events[i].logical_value = negative_events[i-positivepkcnt].logical_value;
+			total_events[i].loc = negative_events[i - positivepkcnt].loc;
+			total_events[i].logical_value = negative_events[i - positivepkcnt].logical_value;
 		}
 	}
-	
-	for(i = 0; i < positivepkcnt + negativepkcnt; i++)
+
+	for (i = 0; i < positivepkcnt + negativepkcnt; i++)
 	{
-		for(j = i; j < positivepkcnt + negativepkcnt; j++)
+		for (j = i; j < positivepkcnt + negativepkcnt; j++)
 		{
-			if(total_events[i].loc > total_events[j].loc)
+			if (total_events[i].loc > total_events[j].loc)
 			{
 				temp = total_events[i].loc;
 				tempval = total_events[i].logical_value;
-				
+
 				total_events[i].loc = total_events[j].loc;
 				total_events[i].logical_value = total_events[j].logical_value;
-				
+
 				total_events[j].loc = temp;
 				total_events[j].logical_value = tempval;
 			}
 		}
 	}
-	
-	
-	
+
+
+
 	//total_events = sortrows(total_events,1);
 	// now we have all the peaks that were thresholded (sorted in time), STORED IN all_peaks
 }
@@ -419,11 +553,11 @@ void sort_and_combine(Events* positive_events, int positivepkcnt,Events* negativ
 Events* get_total_events(int* positivepklocs, int* negativepklocs, int positivepkcnt, int negativepkcnt)
 {
 	int i
-	;
+		;
 	Events* positive_events = (Events*)malloc(positivepkcnt*sizeof(Events));
-	Events* negative_events = (Events*)malloc(negativepkcnt*sizeof(Events));	
-	Events* total_events = (Events*)malloc((positivepkcnt+negativepkcnt)*sizeof(Events));	
-	
+	Events* negative_events = (Events*)malloc(negativepkcnt*sizeof(Events));
+	Events* total_events = (Events*)malloc((positivepkcnt + negativepkcnt)*sizeof(Events));
+
 	for (i = 0; i < positivepkcnt; i++)
 	{
 		positive_events[i].loc = positivepklocs[i];
@@ -435,7 +569,7 @@ Events* get_total_events(int* positivepklocs, int* negativepklocs, int positivep
 		negative_events[i].loc = negativepklocs[i];
 		negative_events[i].logical_value = NEG_VAL;
 	}
-	sort_and_combine(positive_events,positivepkcnt, negative_events,negativepkcnt, total_events);
+	sort_and_combine(positive_events, positivepkcnt, negative_events, negativepkcnt, total_events);
 	free(positive_events);
 	free(negative_events);
 	return total_events;
@@ -456,17 +590,17 @@ Events* remove_excess_peaks(Events* total_events, int total_events_cnt, int* num
 		{
 			masked_peaks[k].loc = total_events[i].loc;
 			masked_peaks[k].logical_value = total_events[i].logical_value;
-			k = k+1;
+			k = k + 1;
 			continue;
 		}
-		
-		if (total_events[i].logical_value == masked_peaks[k-1].logical_value && total_events[i].loc < masked_peaks[k-1].loc+min_peak_distance)
+
+		if (total_events[i].logical_value == masked_peaks[k - 1].logical_value && total_events[i].loc < masked_peaks[k - 1].loc + min_peak_distance)
 			continue;
 		else
 		{
 			masked_peaks[k].loc = total_events[i].loc;
 			masked_peaks[k].logical_value = total_events[i].logical_value;
-			k = k+1;
+			k = k + 1;
 		}
 	}
 	//note at this point, k is the number of events left after windowing
@@ -482,37 +616,37 @@ Events* remove_excess_peaks(Events* total_events, int total_events_cnt, int* num
 	return masked_peaks_to_be_returned;
 }
 
-/*
-int* lrl_count_or_blinks(int* masked_peaks,int masked_peaks_length)
+
+int* lrl_count_or_blinks(int* masked_peaks, int masked_peaks_length, int** codestorage)
 {
 	int i = 0;
 	int outputsequence_counter = 0;
 	int temp[4];
 	int* outputsequence;
-	int code1[4] = {POS_VAL, NEG_VAL, POS_VAL, NEG_VAL};
-	int code2[4] = {POS_VAL, POS_VAL, POS_VAL, POS_VAL};
-	
-	outputsequence = (int*)malloc(10*sizeof(int));
-	
-	while ( i < masked_peaks_length)
+	int code1[4] = { POS_VAL, NEG_VAL, POS_VAL, NEG_VAL };
+	int code2[4] = { POS_VAL, POS_VAL, POS_VAL, POS_VAL };
+
+	outputsequence = (int*)malloc(10 * sizeof(int));
+
+	while (i < masked_peaks_length)
 	{
 		if (i < 4)
 		{
 			i = i + 1;
 			continue;
 		}
-		temp[0] = masked_peaks[i-3];
-		temp[1] = masked_peaks[i-2];
-		temp[2] = masked_peaks[i-1];
+		temp[0] = masked_peaks[i - 3];
+		temp[1] = masked_peaks[i - 2];
+		temp[2] = masked_peaks[i - 1];
 		temp[3] = masked_peaks[i];
-		
-		if (temp[0] == code1[0] && temp[1] == code1[1] && temp[2] == code1[2] && temp[3] == code1[3] )
+
+		if (temp[0] == code1[0] && temp[1] == code1[1] && temp[2] == code1[2] && temp[3] == code1[3])
 		{
 			outputsequence[outputsequence_counter] = 2;
 			outputsequence_counter++;
 			i = i + 4;
 		}
-		else if (temp[0] == code2[0] && temp[1] == code2[1] && temp[2] == code2[2] && temp[3] == code2[3] )
+		else if (temp[0] == code2[0] && temp[1] == code2[1] && temp[2] == code2[2] && temp[3] == code2[3])
 		{
 			outputsequence[outputsequence_counter] = 3;
 			outputsequence_counter++;
@@ -520,83 +654,20 @@ int* lrl_count_or_blinks(int* masked_peaks,int masked_peaks_length)
 		}
 		else
 		{
-			i=i+1;
+			i = i + 1;
 			continue;
 		}
 	}
+	*codestorage = outputsequence;
 	return outputsequence;
 }
-*/
 
-
-int main(void)
+void code_from_pwm(int sig_length, int* positivepklocs, int positivepkcnt, int** codestorage)
 {
-	int i = 0, j =0, k = 0, number, limit,thismany;
-	int window = 2.5*128;
-	//pointers for importing data
-	float** rawdata = NULL;
-	float* F7 = NULL;
-	int sig_length = 0;
-	int period[50];
-	
-	//pointers for intermediary storage	
-	float* positivepkheights = NULL;
-	int* positivepklocs = NULL;
-	int positivepkcnt = 0;	
-	
-	float* negativepkheights = NULL;
-	int* negativepklocs = NULL;
-	int negativepkcnt = 0;
-	
-	float threshold = 0;
-
-	Events* total_events;
-	Events* masked_peaks;
-	int * masked_values;
-	int totalpkcnt = 0;
-	int numof_realpeaks= 0 ;
-
-	int* code;
-
-	//location of data file to be imported
-	char* filename = "C:/CCStudio_v3.1/MyProjects/anthony-s1-09.12.13.15.22.52.CSV";
-	printf("Welcome to NeuroPass!\n\n");
-	//calculate the rows in the csv file
-	sig_length = countlines(filename) - 1;
-
-	//import the csv file
-	rawdata = loaddata(filename,sig_length);
-
-	//verify successful import of csv file
-	if (rawdata == NULL)
-		printf("Import Failed. rawdata is still null!\n");
-	else
-		printf("Import Successful! rawdata is located at: %x .\n",rawdata);
-
-	//remove the raw data's dc offset
-	dcoffsetbegone(rawdata,sig_length);
-	
-	//run desired channel through yuyu's highpass filter
-	F7 = filterdata(rawdata[1],sig_length);
-	
-	//calculate the threshold
-	threshold = calcthreshold(F7,sig_length);
-
-	//find the positive peaks of the channel of choice
-	fpeaks(F7, sig_length, threshold, &positivepkheights, &positivepklocs, &positivepkcnt,0);
-	//find the negative peaks of the channel of choice
-	//fpeaks(F7, sig_length, threshold, &negativepkheights, &negativepklocs, &negativepkcnt,1);
-
-	/*for(i = 0; i < positivepkcnt; i++)
-		printf("%d\n",positivepklocs[i]);*/
-	//totalpkcnt = positivepkcnt + negativepkcnt;
-	
-	//knowing the set of threshold-ed peaks, quantize
-	//the positive and negative peaks into a sequence
-
-	printf("\nMy Code is:\n");
-	//total_events = get_total_events(positivepklocs, negativepklocs, positivepkcnt, negativepkcnt);
-	i = 0;
+	int i = 0, j = 0, k = 0;
+	int window = 2.5 * 128, numof_windows = 0, limit = 0, number = 0;
+	int period[30];
+	int* codetemp;
 	while (i < sig_length)
 	{
 		limit = i + window;
@@ -604,60 +675,33 @@ int main(void)
 		for (j = 0; j < positivepkcnt; j++)
 		{
 			if (positivepklocs[j] < limit && positivepklocs[j] > i)
-				number = number+1;
+				number = number + 1;
 		}
 		i = i + window;
 		period[k] = number;
-		k=k+1;
+		k = k + 1;
 	}
-	thismany = k;
+	numof_windows = k;
 
-	k=0;
-	for (i=0; i < thismany; i++)
+	codetemp = (int*)malloc(numof_windows*sizeof(int));
+
+	k = 0;
+	for (i = 0; i < numof_windows; i++)
 	{
 		if (period[i] > 5)
 		{
-			printf("3\n");
-			k=k+1;
+			codetemp[k] = 3;
+			k = k + 1;
 		}
 		else if (period[i] > 0)
 		{
-			printf("2\n");
-			k=k+1;
+			codetemp[k] = 2;
+			k = k + 1;
 		}
 	}
-
-	/*
-	masked_peaks = remove_excess_peaks(total_events, totalpkcnt, &numof_realpeaks);
-
-	for (i = 0; i < numof_realpeaks;i ++)
-	{
-		masked_values[i] = masked_peaks[i].logical_value;
-	}
-	*/
-	//using the sequence, identify the lrl
-	//code = lrl_count_or_blinks(masked_values, numof_realpeaks);
-
-	//remainder is blinks???
-
-
-	//return the final password sequence
-	//printf("My Code is %d %d %d %d %d\n", code[0], code[1], code[2], code[3], code[4]);
-
-	printf("Thanks!\n");
-	free(rawdata);
-	free(F7);
-	free(positivepkheights);
-	free(positivepklocs);
-	free(negativepkheights);
-	free(negativepklocs);
-	free(total_events);
-	return 0;
+	*codestorage = codetemp;
 
 }
-
-
-
 
 
 
