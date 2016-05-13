@@ -22,5 +22,5 @@ time = time';
 AC_EEG_data(:,15) = time;
 %% output the resulting file
 save('AC_EEG_data.mat', 'AC_EEG_data')
-display('AC_EEG_data.mat sucessfully created.')
+display('AC_EEG_data.mat successfully created.')
 end
