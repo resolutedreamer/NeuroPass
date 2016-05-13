@@ -14,6 +14,7 @@ for r = 2 : rows
     back = (back*( IIR_TC- 1 ) + EEG_data( r,:)) / IIR_TC; 
     AC_EEG_data( r,:) = EEG_data( r,:)- back;
 end
+% AC_EEG_data = EEG_data;
 %% add time column back in
 for i=1:length(AC_EEG_data(:,1))
 	time(i) = i;
