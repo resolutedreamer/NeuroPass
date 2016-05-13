@@ -1,0 +1,40 @@
+; Code Composer Project File, Version 2.0 (do not modify or remove this line)
+
+[Project Settings]
+ProjectDir="C:\CCStudio_v3.1\MyProjects\filers\"
+ProjectType=Executable
+CPUFamily=TMS320C64XX
+Tool="Compiler"
+Tool="CustomBuilder"
+Tool="DspBiosBuilder"
+Tool="Linker"
+Config="Debug"
+Config="Release"
+
+[Source Files]
+Source="filers.cdb"
+Source="main.c"
+
+[Generated Files]
+Source="filerscfg.cmd"
+Source="filerscfg.s62"
+Source="filerscfg_c.c"
+
+["Compiler" Settings: "Debug"]
+Options=-g -fr"$(Proj_dir)\Debug" -i"." -i"$(Install_dir)\c6000\dsk6416\include" -d"_DEBUG" -mv6400
+
+["Compiler" Settings: "Release"]
+Options=-o3 -fr"$(Proj_dir)\Release" -mv6400
+
+["Linker" Settings: "Debug"]
+Options=-c -m".\Debug\filers.map" -o".\Debug\filers.out" -w -x -i"$(Install_dir)\c6000\dsk6416\lib" -l"dsk6416bsl.lib"
+
+["Linker" Settings: "Release"]
+Options=-c -m".\Release\filers.map" -o".\Release\filers.out" -w -x
+
+["filerscfg.cmd" Settings: "Debug"]
+LinkOrder=1
+
+["filerscfg.cmd" Settings: "Release"]
+LinkOrder=1
+
