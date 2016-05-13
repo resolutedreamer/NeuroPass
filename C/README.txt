@@ -1,8 +1,10 @@
-filers_V3 is the code from 05:36 AM on 12/09/13 
+filers_V3 is the code from 08:41 AM on 12/09/13 
+
 filers_v3 works. it contains the functions:
 main, loaddata, countlines, IIRSOS, filterdata,
 dcoffsetbegone, findmean, findstd, calcthreshold
-fpeaks,
+fpeaks,sort_and_combine,get_total_events,remove_excess_peaks
+the struct: Events
 
 SD ram set to 0x00f00000
 

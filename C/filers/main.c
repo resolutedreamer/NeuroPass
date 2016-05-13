@@ -3,6 +3,15 @@
 #include <math.h>
 #define PI 3.14159265359
 #define NUM_SECTIONS 1
+#define POS_VAL 2	// POS peaks have value 2
+#define NEG_VAL 3	// NEG peaks have value 3
+
+typedef struct Events
+{
+	int loc;
+	int logical_value;
+} Events;
+
 
 float** loaddata(char* filename, int numof_lines)
 {
@@ -178,8 +187,6 @@ void IIRSOS(float* filterthis,int sig_length, float* temp,int Fs, int cutoff,int
 	printf("");
 }
 
-
-
 float* filterdata(float * signal, int sig_length)
 {
 	float* temp = (float*)malloc(sizeof(float)*sig_length);
@@ -218,11 +225,6 @@ float** dcoffsetbegone(float* datamatrix[], int numof_rows)
 	return datamatrix;
 }
 
-
-
-
-
-
 float findmean(float* signal, int signal_length)
 {
 	int i = 0;
@@ -235,14 +237,6 @@ float findmean(float* signal, int signal_length)
 	printf ("The mean is %f!\n", mean);
 	return mean;
 }
-
-
-
-
-
-
-
-
 
 float findstd(float* signal, int signal_length)
 {
@@ -281,21 +275,40 @@ float calcthreshold(float* signal, int rows)
 	return threshold;
 }
 
-void fpeaks(float* signal, int signal_length, float threshold, float** usefulpks, int ** usefullocs, int * usefulpkcnt)
+void fpeaks(float* signal, int signal_length, float threshold, float** usefulpks, int ** usefullocs, int * usefulpkcnt, int posorneg)
 //returns the number of useful peaks
 {
 	int i = 0, k = 0;
+	float* temp;
+	
 	float * peaks = NULL;
-	int pksfound = 0;
 	int * locs = NULL;
+	int pksfound = 0;
 
 	float * thresholdedpeaks = NULL;
-	int thresholdedpksfound = 0;
 	int * thresholdedlocs = NULL;
+	int thresholdedpksfound = 0;
 
 	float * finalpeaks = NULL;
-	int finalpksfound = 0;
 	int * finallocs = NULL;
+	int finalpksfound = 0;
+	
+	//copy either +signal or -signal into temp depending on user input
+	temp = (float*)malloc(sizeof(float)*signal_length);
+	if (posorneg == 0)
+	{
+		for(i = 0; i < signal_length; i++)
+		{
+			temp[i] = signal[i];
+		}
+	}
+	else if (posorneg == 1)
+	{
+		for(i = 0; i < signal_length; i++)
+		{
+			temp[i] = -1.0*signal[i];
+		}
+	}
 
 	// allocate enough room for signal/3 peaks
 	peaks = (float*) malloc(sizeof(float) * (int)signal_length/3);
@@ -308,10 +321,10 @@ void fpeaks(float* signal, int signal_length, float threshold, float** usefulpks
 	{
 		if (i == 0)
 			continue;
-		if (signal[i] > signal[i - 1] && signal[i] > signal[i + 1])
+		if (temp[i] > temp[i - 1] && temp[i] > temp[i + 1])
 		{
-			// good canidate
-			peaks[k] = signal[i];
+			// good candidate
+			peaks[k] = temp[i];
 			locs[k] = i;
 			k = k + 1;
 		}
@@ -357,7 +370,118 @@ void fpeaks(float* signal, int signal_length, float threshold, float** usefulpks
 	*usefulpks = finalpeaks;
 	*usefullocs = finallocs;
 	*usefulpkcnt = finalpksfound;
+	
+	free(temp);
 }
+
+void sort_and_combine(Events* positive_events, int positivepkcnt,Events* negative_events, int negativepkcnt, Events* total_events)
+{	
+	int i = 0, j = 0, temp = 0, tempval = 0;
+	//pos = 3 neg = 2
+	for (i = 0; i < positivepkcnt + negativepkcnt; i++)
+	{
+		if (i < positivepkcnt)
+		{
+			total_events[i].loc = positive_events[i].loc;
+			total_events[i].logical_value = positive_events[i].logical_value;
+		}
+		else if (i >= positivepkcnt)
+		{
+			total_events[i].loc = negative_events[i-positivepkcnt].loc;
+			total_events[i].logical_value = negative_events[i-positivepkcnt].logical_value;
+		}
+	}
+	
+	for(i = 0; i < positivepkcnt + negativepkcnt; i++)
+	{
+		for(j = i; j < positivepkcnt + negativepkcnt; j++)
+		{
+			if(total_events[i].loc > total_events[j].loc)
+			{
+				temp = total_events[i].loc;
+				tempval = total_events[i].logical_value;
+				
+				total_events[i].loc = total_events[j].loc;
+				total_events[i].logical_value = total_events[j].logical_value;
+				
+				total_events[j].loc = temp;
+				total_events[j].logical_value = tempval;
+			}
+		}
+	}
+	
+	
+	
+	//total_events = sortrows(total_events,1);
+	// now we have all the peaks that were thresholded (sorted in time), STORED IN all_peaks
+}
+
+Events* get_total_events(int* positivepklocs, int* negativepklocs, int positivepkcnt, int negativepkcnt)
+{
+	int i
+	;
+	Events* positive_events = (Events*)malloc(positivepkcnt*sizeof(Events));
+	Events* negative_events = (Events*)malloc(negativepkcnt*sizeof(Events));	
+	Events* total_events = (Events*)malloc((positivepkcnt+negativepkcnt)*sizeof(Events));	
+	
+	for (i = 0; i < positivepkcnt; i++)
+	{
+		positive_events[i].loc = positivepklocs[i];
+		positive_events[i].logical_value = POS_VAL;
+	}
+
+	for (i = 0; i < negativepkcnt; i++)
+	{
+		negative_events[i].loc = negativepklocs[i];
+		negative_events[i].logical_value = NEG_VAL;
+	}
+	sort_and_combine(positive_events,positivepkcnt, negative_events,negativepkcnt, total_events);
+	free(positive_events);
+	free(negative_events);
+	return total_events;
+}
+
+Events* remove_excess_peaks(Events* total_events, int total_events_cnt)
+{
+	// now we have peaks, where same type of peak (e.g. ++)
+	//must be separated by min_peak_distance, STORED IN masked_peaks
+
+	Events* masked_peaks = (Events*)malloc(sizeof(Events)*total_events_cnt);
+	Events* masked_peaks_to_be_returned;
+	int min_peak_distance = 200;
+	int i = 0, k = 0;
+	for (i = 0; i < total_events_cnt; i++)
+	{
+		if (i == 0)
+		{
+			masked_peaks[k].loc = total_events[i].loc;
+			masked_peaks[k].logical_value = total_events[i].logical_value;
+			k = k+1;
+			continue;
+		}
+		
+		if (total_events[i].logical_value == masked_peaks[k-1].logical_value && total_events[i].loc < masked_peaks[k-1].loc+min_peak_distance)
+			continue;
+		else
+		{
+			masked_peaks[k].loc = total_events[i].loc;
+			masked_peaks[k].logical_value = total_events[i].logical_value;
+			k = k+1;
+		}
+	}
+	
+	masked_peaks_to_be_returned = (Events*)malloc(sizeof(Events)*k);
+	//masked_peaks_to_be_returned = masked_peaks;
+	for (i = 0; i < total_events_cnt; i++)
+	{
+		masked_peaks_to_be_returned[i].loc = masked_peaks[i].loc;
+		masked_peaks_to_be_returned[i].logical_value = masked_peaks[i].logical_value;
+	}
+	free(masked_peaks);
+	return masked_peaks_to_be_returned;
+}
+
+
 
 int main(void)
 {
@@ -366,11 +490,20 @@ int main(void)
 	float* F7 = NULL;
 	int sig_length = 0;
 	
-	//pointers for intermediary storage
-	int* realpklocs = NULL;
-	float* realpkheights = NULL;
-	int realpkcnt = 0;
+	//pointers for intermediary storage	
+	float* positivepkheights = NULL;
+	int* positivepklocs = NULL;
+	int positivepkcnt = 0;	
+	
+	float* negativepkheights = NULL;
+	int* negativepklocs = NULL;
+	int negativepkcnt = 0;
+	
 	float threshold = 0;
+
+	Events* total_events;
+	Events* masked_peaks;
+	int totalpkcnt = 0;
 
 	//location of data file to be imported
 	char* filename = "C:/CCStudio_v3.1/MyProjects/s1-24eyes.CSV";
@@ -381,7 +514,7 @@ int main(void)
 	//import the csv file
 	rawdata = loaddata(filename,sig_length);
 
-	//verify succesful import of csv file
+	//verify successful import of csv file
 	if (rawdata == NULL)
 		printf("Import Failed. rawdata is still null!\n");
 	else
@@ -393,15 +526,19 @@ int main(void)
 	//run desired channel through yuyu's highpass filter
 	F7 = filterdata(rawdata[1],sig_length);
 	
-	//calculate the threhold
+	//calculate the threshold
 	threshold = calcthreshold(F7,sig_length);
 
-	//find the peaks of the channel of choice
-	fpeaks(F7, sig_length, threshold, &realpkheights, &realpklocs, &realpkcnt);
+	//find the positive peaks of the channel of choice
+	fpeaks(F7, sig_length, threshold, &positivepkheights, &positivepklocs, &positivepkcnt,0);
+	//find the negative peaks of the channel of choice
+	fpeaks(F7, sig_length, threshold, &negativepkheights, &negativepklocs, &negativepkcnt,1);
+	totalpkcnt = positivepkcnt + negativepkcnt;
 	
-	//knowing the set of thresholded peaks, quantize
+	//knowing the set of threshold-ed peaks, quantize
 	//the positive and negative peaks into a sequence
-	
+	total_events = get_total_events(positivepklocs, negativepklocs, positivepkcnt, negativepkcnt);
+	masked_peaks = remove_excess_peaks(total_events, totalpkcnt);
 
 	//using the sequence, identify the lrl
 
@@ -410,8 +547,16 @@ int main(void)
 
 
 	//return the final password sequence
+	
 
-	printf("wheeeeeee");
+	printf("wheeeeeeee!\n");
+	free(rawdata);
+	free(F7);
+	free(positivepkheights);
+	free(positivepklocs);
+	free(negativepkheights);
+	free(negativepklocs);
+	free(total_events);
 	return 0;
 
 }
