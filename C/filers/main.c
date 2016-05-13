@@ -1,84 +1,73 @@
 #include <stdio.h>
-
-float AC_EEG_data[28];
-
-int x, y;
-
+#define LENGTH 100
 
 void loaddata(char * input)
 {
-	int most_digits = 20, bigcounter=0, doneflag=0;
-	char temp[20];
-	char *idx;
-
-	int i = 0;
-	double current_number = 0;
-
-	//int a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14;
-	//double d;
-
-	// get the input file, which at this point is a text file containing AC_EEG_data
-	FILE* fp = fopen(input,"r");
+	//initialize all variables
+	char c;
+	int i = 0, j = 0;
+		// initialize 2D float array
+		double temp[16];
+		double data[LENGTH][14];
 
 
-	printf("Importing AC_EEG_data.csv.\n");
-	if (fp == NULL)
+
+	//open the file
+	FILE* csv = fopen(input, "r");
+
+	// check if file was opened
+	if (!csv)
+		printf("File could not be opened.\n");
+
+	// skip over first line	
+	do
+	c = fgetc(csv);
+	while (c != '\n');
+
+	//store one row, for LENGTH number of rows
+	for (i = 0; i < LENGTH; i++)
 	{
-		printf("Error. File open failed.\n");
-		return;
-	}
-	//fscanf(fp, "%f", AC_EEG_data);
-	//fscanf(fp, "%d,%c", &x, &c);
 
-	//stores characters into temp char array until you try to store a comma
-	while (1)
-	{
- 		for( i = 0; i < most_digits; i++)	
+		// get first 16 columns
+		for (j = 0; j < 16; j++)
 		{
-			temp[i] = fgetc(fp);
-			if (temp[i] == ',')
-				break;
-			else if (temp[i] == EOF)
-				doneflag=1;
+			// add double to array
+			fscanf(csv, "%lf", &temp[j]);
+
+			// skip comma
+			fgetc(csv);
 		}
-		if(doneflag==1)
+
+		// copy correct columns to new array
+		for (j = 0; j < 14; j++)
 		{
-			break;
+			data[i][j] = temp[j + 2];
 		}
-		else
-		{
-			//instead of storing a comma, mark the end of the string
-			temp[i] = '\0';
-			//i = 0;
-			//printf("%s\n",strcpy(idx,temp,2));
-			current_number = atoi(strcpy(idx,temp,2)); ///////////// From TA: The pointer idx is used to store the first two values of temp
-			AC_EEG_data[bigcounter] = current_number;
-			printf("%f\n", current_number);
-			bigcounter++;
-		}
+
+		// skip rest of line
+		do
+		c = fgetc(csv);
+		while (c != '\n');
 	}
 
-
-	
-	//for(x = 0; x < 70; x ++) {
-	//		printf("%f\n", AC_EEG_data[x]);
-	//}
-
-	//DOUBLE POINTERS
-	//FGET
-	
-	fclose(fp);
-	printf("AC_EEG_data.csv successfully imported into AC_EEG_data array.\n");
+	for (i = 0; i < LENGTH; i++)
+	{
+		for (j = 0; j < 14; j++)
+		{
+			printf("%f, ", data[i][j]);
+			if (j == 13)
+				printf("\n");
+		}
+	}
+	printf("Data successfully imported into data array.\n");
 }
-
-
 
 
 
 int main()
 {
 	printf("Hello World.\n");
-	loaddata("C:\Data\anthony.CSV");
+	loaddata("C:/CCStudio_v3.1/MyProjects/filers/s1-24eyeslrl-27.11.13.01.57.01.CSV");
 	printf("Done.\n");
 	return 0;
 }
