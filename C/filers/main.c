@@ -1,16 +1,17 @@
 #include <stdio.h>
-#define LENGTH 100
+#define LENGTH 10000
+
+// initialize 2D float array
+float temp[16];
+float data[LENGTH][14];
 
 void loaddata(char * input)
 {
 	//initialize all variables
 	char c;
 	int i = 0, j = 0;
-		// initialize 2D float array
-		double temp[16];
-		double data[LENGTH][14];
-
-
+	
+	//#pragma data(buffer,".EXT_RAM")
 
 	//open the file
 	FILE* csv = fopen(input, "r");
@@ -32,14 +33,14 @@ void loaddata(char * input)
 		for (j = 0; j < 16; j++)
 		{
 			// add double to array
-			fscanf(csv, "%lf", &temp[j]);
+			fscanf(csv, "%f", &temp[j]);
 
 			// skip comma
 			fgetc(csv);
 		}
 
 		// copy correct columns to new array
-		for (j = 0; j < 14; j++)
+ 		for (j = 0; j < 14; j++)
 		{
 			data[i][j] = temp[j + 2];
 		}
