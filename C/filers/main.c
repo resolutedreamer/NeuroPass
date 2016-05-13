@@ -96,7 +96,7 @@ float** loaddata(char* filename, int numof_lines)
 
 		} while (c != '\n');
 
-		printf("Line %d is completed.\n", counter);
+		//printf("Line %d is completed.\n", counter);
 	}
 
 	// print out final 2D array
@@ -441,14 +441,14 @@ Events* get_total_events(int* positivepklocs, int* negativepklocs, int positivep
 	return total_events;
 }
 
-Events* remove_excess_peaks(Events* total_events, int total_events_cnt)
+Events* remove_excess_peaks(Events* total_events, int total_events_cnt, int* numof_realpeaks)
 {
 	// now we have peaks, where same type of peak (e.g. ++)
 	//must be separated by min_peak_distance, STORED IN masked_peaks
 
 	Events* masked_peaks = (Events*)malloc(sizeof(Events)*total_events_cnt);
 	Events* masked_peaks_to_be_returned;
-	int min_peak_distance = 200;
+	int min_peak_distance = 175;
 	int i = 0, k = 0;
 	for (i = 0; i < total_events_cnt; i++)
 	{
@@ -469,26 +469,75 @@ Events* remove_excess_peaks(Events* total_events, int total_events_cnt)
 			k = k+1;
 		}
 	}
-	
+	//note at this point, k is the number of events left after windowing
 	masked_peaks_to_be_returned = (Events*)malloc(sizeof(Events)*k);
 	//masked_peaks_to_be_returned = masked_peaks;
-	for (i = 0; i < total_events_cnt; i++)
+	for (i = 0; i < k; i++)
 	{
 		masked_peaks_to_be_returned[i].loc = masked_peaks[i].loc;
 		masked_peaks_to_be_returned[i].logical_value = masked_peaks[i].logical_value;
 	}
+	*numof_realpeaks = k;
 	free(masked_peaks);
 	return masked_peaks_to_be_returned;
 }
 
+/*
+int* lrl_count_or_blinks(int* masked_peaks,int masked_peaks_length)
+{
+	int i = 0;
+	int outputsequence_counter = 0;
+	int temp[4];
+	int* outputsequence;
+	int code1[4] = {POS_VAL, NEG_VAL, POS_VAL, NEG_VAL};
+	int code2[4] = {POS_VAL, POS_VAL, POS_VAL, POS_VAL};
+	
+	outputsequence = (int*)malloc(10*sizeof(int));
+	
+	while ( i < masked_peaks_length)
+	{
+		if (i < 4)
+		{
+			i = i + 1;
+			continue;
+		}
+		temp[0] = masked_peaks[i-3];
+		temp[1] = masked_peaks[i-2];
+		temp[2] = masked_peaks[i-1];
+		temp[3] = masked_peaks[i];
+		
+		if (temp[0] == code1[0] && temp[1] == code1[1] && temp[2] == code1[2] && temp[3] == code1[3] )
+		{
+			outputsequence[outputsequence_counter] = 2;
+			outputsequence_counter++;
+			i = i + 4;
+		}
+		else if (temp[0] == code2[0] && temp[1] == code2[1] && temp[2] == code2[2] && temp[3] == code2[3] )
+		{
+			outputsequence[outputsequence_counter] = 3;
+			outputsequence_counter++;
+			i = i + 4;
+		}
+		else
+		{
+			i=i+1;
+			continue;
+		}
+	}
+	return outputsequence;
+}
+*/
 
 
 int main(void)
 {
+	int i = 0, j =0, k = 0, number, limit,thismany;
+	int window = 2.5*128;
 	//pointers for importing data
 	float** rawdata = NULL;
 	float* F7 = NULL;
 	int sig_length = 0;
+	int period[50];
 	
 	//pointers for intermediary storage	
 	float* positivepkheights = NULL;
@@ -503,10 +552,14 @@ int main(void)
 
 	Events* total_events;
 	Events* masked_peaks;
+	int * masked_values;
 	int totalpkcnt = 0;
+	int numof_realpeaks= 0 ;
+
+	int* code;
 
 	//location of data file to be imported
-	char* filename = "C:/CCStudio_v3.1/MyProjects/s1-24eyes.CSV";
+	char* filename = "C:/CCStudio_v3.1/MyProjects/anthony-s1-09.12.13.15.22.52.CSV";
 	printf("Welcome to NeuroPass!\n\n");
 	//calculate the rows in the csv file
 	sig_length = countlines(filename) - 1;
@@ -532,24 +585,66 @@ int main(void)
 	//find the positive peaks of the channel of choice
 	fpeaks(F7, sig_length, threshold, &positivepkheights, &positivepklocs, &positivepkcnt,0);
 	//find the negative peaks of the channel of choice
-	fpeaks(F7, sig_length, threshold, &negativepkheights, &negativepklocs, &negativepkcnt,1);
-	totalpkcnt = positivepkcnt + negativepkcnt;
+	//fpeaks(F7, sig_length, threshold, &negativepkheights, &negativepklocs, &negativepkcnt,1);
+
+	/*for(i = 0; i < positivepkcnt; i++)
+		printf("%d\n",positivepklocs[i]);*/
+	//totalpkcnt = positivepkcnt + negativepkcnt;
 	
 	//knowing the set of threshold-ed peaks, quantize
 	//the positive and negative peaks into a sequence
-	total_events = get_total_events(positivepklocs, negativepklocs, positivepkcnt, negativepkcnt);
-	masked_peaks = remove_excess_peaks(total_events, totalpkcnt);
 
+	printf("\nMy Code is:\n");
+	//total_events = get_total_events(positivepklocs, negativepklocs, positivepkcnt, negativepkcnt);
+	i = 0;
+	while (i < sig_length)
+	{
+		limit = i + window;
+		number = 0;
+		for (j = 0; j < positivepkcnt; j++)
+		{
+			if (positivepklocs[j] < limit && positivepklocs[j] > i)
+				number = number+1;
+		}
+		i = i + window;
+		period[k] = number;
+		k=k+1;
+	}
+	thismany = k;
+
+	k=0;
+	for (i=0; i < thismany; i++)
+	{
+		if (period[i] > 5)
+		{
+			printf("3\n");
+			k=k+1;
+		}
+		else if (period[i] > 0)
+		{
+			printf("2\n");
+			k=k+1;
+		}
+	}
+
+	/*
+	masked_peaks = remove_excess_peaks(total_events, totalpkcnt, &numof_realpeaks);
+
+	for (i = 0; i < numof_realpeaks;i ++)
+	{
+		masked_values[i] = masked_peaks[i].logical_value;
+	}
+	*/
 	//using the sequence, identify the lrl
-
+	//code = lrl_count_or_blinks(masked_values, numof_realpeaks);
 
 	//remainder is blinks???
 
 
 	//return the final password sequence
-	
+	//printf("My Code is %d %d %d %d %d\n", code[0], code[1], code[2], code[3], code[4]);
 
-	printf("wheeeeeeee!\n");
+	printf("Thanks!\n");
 	free(rawdata);
 	free(F7);
 	free(positivepkheights);
