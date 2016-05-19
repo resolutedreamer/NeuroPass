@@ -1,0 +1,6 @@
+{
+  "name": "Neuropass",
+  "tagline": "The Next Generation Password System!",
+  "body": "#Welcome to NeuroPass!\r\n\r\n##Introduction:\r\nThis is the first completed release of NeuroPass put together since the end of Fall Quarter 2013. NeuroPass is a password system that uses EEG waves collected from the Emotiv EEG Neuroheadset, which is the full version of Emotiv's EPOC headset and allows the use of raw EEG data. The raw EEG data on several of the channels is used by our program in order to encode a password.\r\n\r\n##Source Code:\r\nThe program is provided in two forms: MATLAB and C for use in a Code Composer Studio project on the Texas Instruments TMS320C6416 DSP Starter Kit.\r\n\r\n##WARNING:\r\nThis application as it stands is incomplete. I am using the upload of this program in order to practice using Git and GitHub. At a later date the program will be made to be functionally complete.\r\n\r\n##Credits:\r\nThis project is a collaboration between two authors, Anthony Nguyen and Abhejit Rajagopal.\r\nCode Last Updated 2014-02-17\r\n",
+  "note": "Don't delete this file! It's used internally to help with page regeneration."
+}
