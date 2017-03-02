@@ -1,14 +1,16 @@
-function result = result_generator(input_path)
-%result_generator Summary of this function goes here
+function [ch1, ch2] = process_raw_data(input_path)
+% process_raw_data Loads raw data from Emotiv into MATLAB
 %   Detailed explanation goes here
 
-% loaddata('data/anthony-1minclenches-19.11.13.17.25.47.csv')
-% loaddata('data/anthony-1minlniks-19.11.13.17.23.35.csv')
-% loaddata('data/anthony-1minmixed-19.11.13.19.12.03.csv')
-loaddata(input_path);
+% convert_csv_to_mat('data/anthony-1minclenches-19.11.13.17.25.47.csv')
+% convert_csv_to_mat('data/anthony-1minlniks-19.11.13.17.23.35.csv')
+% convert_csv_to_mat('data/anthony-1minmixed-19.11.13.19.12.03.csv')
+
+%% STEP 1) Load the data
+convert_csv_to_mat(input_path);
 load('AC_EEG_data.mat');
 
-%% extract the processed datasets
+%% STEP 2) Seperate each channel
 AF3 = AC_EEG_data(:,1);
 F7 = AC_EEG_data(:,2);
 F3 = AC_EEG_data(:,3);
@@ -26,13 +28,9 @@ AF4 = AC_EEG_data(:,14);
 time = AC_EEG_data(:,15);
 display('Done.')
 
-verbosity = 1;
-
+%% STEP 3) Select channels of interest
 ch1 = F7;	%blink and clench
 ch2 = T7;	%clench only
-
-result = blink_clench(ch1,ch2,time,verbosity);
-display(result');
 
 end
 
