@@ -1,4 +1,4 @@
-function [result] = blink_clench(ch1,ch2,time,verbosity)
+function [result] = identify_sequence(ch1,ch2,time,verbosity)
 % % % % Blink-Clench Identification
 
 % % For the blink-clench identification algorithm, we will be using two
@@ -18,15 +18,15 @@ function [result] = blink_clench(ch1,ch2,time,verbosity)
 
 % % Finally, generate the code corresponding to the sequence.
 
-%%%% Find all peaks
+%% Step 1) Find all peaks
 ref = ch2;
 dataset = ch1;
 
 thresholding_percentage = 1;
 thresholding = mean(ref) + std(ref);
 
-% % find peaks with thresholding
-to_threshold =dataset;
+%% Step 2) Find peaks with thresholding
+to_threshold = dataset;
 [pks,locs]=findpeaks(to_threshold,'MINPEAKDISTANCE',50,'MINPEAKHEIGHT',(thresholding_percentage*thresholding));
 
 if verbosity == 1
@@ -36,10 +36,9 @@ if verbosity == 1
 	hold all;
 	plot(locs, pks, 'o')
 	title('Blinking and Clenching Activity Peaks', 'FontWeight','bold')
-
 end
 
-% % segment beats based on peak loc data
+%% Step 3) segment beats based on peak loc data
 edges_locs = generate_edges_from_locs(locs);
 segmented = segment_by_edge(time, dataset, edges_locs);
 
@@ -93,14 +92,15 @@ mixed_locs = locs;
 % clenching_locs = locs;
 % clenching_pks = pks;
 % %%%% end
-%%%% Find clenching (improved for specific F7 and T7 with no other movement)
+
+%% Step 4) Find clenching (improved for specific F7 and T7 with no other movement)
 ref = ch1;
 dataset = ch1;
 
 thresholding_percentage = 1;
 thresholding = mean(ref) + std(ref);
 
-% % find peaks with thresholding
+%% Step 5 find peaks with thresholding
 to_threshold =dataset;
 [pks,locs]=findpeaks(to_threshold,'MINPEAKDISTANCE',50,'MINPEAKHEIGHT',(thresholding_percentage*thresholding));
 
@@ -114,7 +114,7 @@ if verbosity == 1
 
 end
 
-% % segment beats based on peak loc data
+%% Step 6segment beats based on peak loc data
 edges_locs = generate_edges_from_locs(locs);
 segmented = segment_by_edge(time, dataset, edges_locs);
 
@@ -131,7 +131,7 @@ clenching_locs = locs;
 clenching_pks = pks;
 %%%% end
 
-% % determine sequence
+%% Final Step) Determine sequence
 %using improved clenching locs algorithm
 % logic 0 = blinking
 % logic 1 = clenching
