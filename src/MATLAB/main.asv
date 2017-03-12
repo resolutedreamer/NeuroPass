@@ -31,7 +31,7 @@ password = DataHash(event_sequence, Opt);
 %% STEP 4) RUN EXPECTED USAGE MODE
 if str == 'a'
     % Save the hash of the password, i.e. the golden keys. Never lose this.
-    save('password.mat', 'password')
+    save('password.mat', 'password');
     display('You have saved a new password:');
     display(password);
     display('You should delete the input file immediately to preserve security.');
